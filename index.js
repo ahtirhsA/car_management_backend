@@ -8,7 +8,8 @@ const app=express()
 app.use(cors({ origin: 'http://localhost:3000' }));
 
 
-const upload = multer({ dest: 'uploads/' });  
+
+//const upload = multer({ dest: 'uploads/' });  
 
 
 app.use(express.json())
@@ -20,6 +21,24 @@ const sqlite3=require('sqlite3')
 
 const path=require('path')
 const dbpath=path.join(__dirname,'cars.db')
+
+
+const cloudinary = require('cloudinary').v2;
+
+cloudinary.config({
+  cloud_name:'djzenbn7g',
+  api_key:'122475226176163',       
+  api_secret:'HxKesuUGVk3Kb2EPsODWbqZQzTg',
+});
+
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+
+const storage = new CloudinaryStorage({
+   cloudinary: cloudinary
+   
+ });
+
+ const uploadCloudinary = multer({ storage }); 
 
 let db;
 
@@ -303,7 +322,7 @@ app.get('/details/:id',middleWear,async (req,res)=>{
 
 // CREATE PRODUCTS
 
-app.post('/upload-images',middleWear,upload.fields([{ name: 'thumbnail', maxCount: 1 }, { name: 'images', maxCount: 10 }]),async (req,res)=>{
+app.post('/upload-images',middleWear,uploadCloudinary.fields([{ name: 'thumbnail', maxCount: 1 }, { name: 'images', maxCount: 10 }]),async (req,res)=>{
 
 
     const { error } = formDataValidation.validate(req.body);
@@ -315,6 +334,7 @@ app.post('/upload-images',middleWear,upload.fields([{ name: 'thumbnail', maxCoun
     const {carName,description,userIdentity} = req.body
 
 
+
     if (!req.files['thumbnail'] || !req.files['images'] || req.files['images'].length === 0) {
         return res.status(400).json({ error: 'Thumbnail and images are required' });
     }
@@ -322,7 +342,9 @@ app.post('/upload-images',middleWear,upload.fields([{ name: 'thumbnail', maxCoun
     const thumbnail = req.files['thumbnail'][0];  
     const images = req.files['images'] ;
 
-    const thumbnailUrl = `http://localhost:3004/uploads/${thumbnail.filename}`;
+    const thumbnailUrl = thumbnail.path;
+
+    console.log(thumbnailUrl)
 
 
     const insertCars=`
@@ -340,9 +362,9 @@ app.post('/upload-images',middleWear,upload.fields([{ name: 'thumbnail', maxCoun
 
 
     
-   const imageUrls = images.map((file) => {
-        return `http://localhost:3004/uploads/${file.filename}`;
-      });
+   const imageUrls = images.map((file) => file.path);
+
+   console.log(imageUrls)
 
     for (const url of imageUrls) {
         await db.run(
@@ -361,7 +383,7 @@ app.post('/upload-images',middleWear,upload.fields([{ name: 'thumbnail', maxCoun
 
 //UPDATE PRODUCTS
 
-app.put('/update/:id',middleWear,upload.fields([{ name: 'updImg', maxCount: 1 }, { name: 'updImages', maxCount: 10 }]),async (req,res)=>{
+app.put('/update/:id',middleWear,uploadCloudinary.fields([{ name: 'updImg', maxCount: 1 }, { name: 'updImages', maxCount: 10 }]),async (req,res)=>{
 
   //  console.log(req.files)
 
@@ -382,7 +404,8 @@ app.put('/update/:id',middleWear,upload.fields([{ name: 'updImg', maxCount: 1 },
     const updImg = req.files['updImg'][0];
     const updImages = req.files['updImages'];
 
-    const thumbnailUrl1 = `http://localhost:3004/uploads/${updImg.filename}`;
+    const thumbnailUrl1 = updImg.path;
+
 
 
 
@@ -403,9 +426,7 @@ app.put('/update/:id',middleWear,upload.fields([{ name: 'updImg', maxCount: 1 },
 
         console.log(p)
 
-        const imageUrls1 = updImages.map((file) => {
-            return `http://localhost:3004/uploads/${file.filename}`;
-          });
+        const imageUrls1 = updImages.map((file) => file.path);
 
 
         const delQuery=`
